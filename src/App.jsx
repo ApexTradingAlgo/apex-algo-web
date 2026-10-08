@@ -431,6 +431,7 @@ const Pricing = () => {
         "Free Updates"
       ],
       cta: "Subscribe Now",
+      link: "https://whop.com/checkout/plan_jQQ9isWUSXBXn",
       highlight: false
     },
     {
@@ -447,6 +448,7 @@ const Pricing = () => {
         "Free Updates"
       ],
       cta: "Subscribe Now",
+      link: "https://t.me/apextradingalgo",
       highlight: true
     },
     {
@@ -463,6 +465,7 @@ const Pricing = () => {
         "1-on-1 Setup Call via Telegram"
       ],
       cta: "Get Lifetime",
+      link: "https://t.me/apextradingalgo",
       highlight: false
     }
   ];
@@ -509,7 +512,7 @@ const Pricing = () => {
                 ))}
               </ul>
               
-              <a href="https://t.me/apextradingalgo" target="_blank" rel="noreferrer" className={`block text-center w-full py-4 rounded-xl font-bold transition-all ${plan.highlight ? 'bg-yellow-400 hover:bg-yellow-500 text-slate-950' : 'bg-white/5 hover:bg-white/10 text-white border border-white/10'}`}>
+              <a href={plan.link} target="_blank" rel="noreferrer" className={`block text-center w-full py-4 rounded-xl font-bold transition-all ${plan.highlight ? 'bg-yellow-400 hover:bg-yellow-500 text-slate-950' : 'bg-white/5 hover:bg-white/10 text-white border border-white/10'}`}>
                 {plan.cta}
               </a>
             </div>
