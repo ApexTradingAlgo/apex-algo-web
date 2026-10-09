@@ -323,7 +323,7 @@ const Performance = () => {
               <p className="text-sm text-emerald-100/70">Verified live accounts available to active subscribers. Past performance does not guarantee future results.</p>
             </div>
 
-            <div className="mt-8">
+            <div className="mt-8 flex flex-col sm:flex-row gap-4">
               {algo === 'Theta' ? (
                 <button disabled className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 rounded-lg bg-slate-800 text-slate-500 font-bold border border-white/5 cursor-not-allowed">
                   <Download className="w-4 h-4" /> MT5 Report (Under Development)
@@ -334,7 +334,16 @@ const Performance = () => {
                   download 
                   className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 rounded-lg bg-white/5 hover:bg-white/10 text-white font-bold border border-white/10 transition-colors"
                 >
-                  <Download className="w-4 h-4" /> Download Full MT5 Report
+                  <Download className="w-4 h-4" /> Download Backtest Report
+                </a>
+              )}
+              {algo !== 'Theta' && (
+                <a 
+                  href={`demos/Apex_Algo_${algo}_Demo.ex5`} 
+                  download 
+                  className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all"
+                >
+                  <Download className="w-4 h-4" /> Download Demo EA
                 </a>
               )}
             </div>
@@ -431,6 +440,7 @@ const Pricing = () => {
         "Free Updates"
       ],
       cta: "Subscribe Now",
+      link: "https://t.me/apextradingalgo",
       highlight: false
     },
     {
@@ -447,6 +457,7 @@ const Pricing = () => {
         "Free Updates"
       ],
       cta: "Subscribe Now",
+      link: "https://t.me/apextradingalgo",
       highlight: true
     },
     {
@@ -463,6 +474,7 @@ const Pricing = () => {
         "1-on-1 Setup Call via Telegram"
       ],
       cta: "Get Lifetime",
+      link: "https://t.me/apextradingalgo",
       highlight: false
     }
   ];
@@ -509,7 +521,7 @@ const Pricing = () => {
                 ))}
               </ul>
               
-              <a href="https://t.me/apextradingalgo" target="_blank" rel="noreferrer" className={`block text-center w-full py-4 rounded-xl font-bold transition-all ${plan.highlight ? 'bg-yellow-400 hover:bg-yellow-500 text-slate-950' : 'bg-white/5 hover:bg-white/10 text-white border border-white/10'}`}>
+              <a href={plan.link} target="_blank" rel="noreferrer" className={`block text-center w-full py-4 rounded-xl font-bold transition-all ${plan.highlight ? 'bg-yellow-400 hover:bg-yellow-500 text-slate-950' : 'bg-white/5 hover:bg-white/10 text-white border border-white/10'}`}>
                 {plan.cta}
               </a>
             </div>
