@@ -339,7 +339,7 @@ const Performance = () => {
               )}
               {algo !== 'Theta' && (
                 <a 
-                  href={`demos/Apex_Algo_${algo}_Demo.ex5`} 
+                  href={`demos/Apex_Algorithm_${algo}_Demo.ex5`} 
                   download 
                   className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all"
                 >
