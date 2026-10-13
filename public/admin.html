@@ -217,15 +217,20 @@
               <p class="text-slate-400 text-xs">Manage active buyers, filter by channel, and execute 1-click revocations.</p>
             </div>
             
-            <!-- Sort Dropdown -->
-            <div class="flex items-center gap-2">
-              <span class="text-xs text-slate-400">Sort:</span>
-              <select id="selectSort" onchange="renderTable()" class="bg-slate-900 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-yellow-400">
-                <option value="newest">Newest First</option>
-                <option value="channel">Channel (WhatsApp vs Telegram)</option>
-                <option value="expires">Expiration Date</option>
-                <option value="account">MT5 Account</option>
-              </select>
+            <!-- Sort & Blacklist Controls -->
+            <div class="flex items-center gap-3 flex-wrap">
+              <button onclick="copyBlacklistJSON()" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5" title="Copy revoked keys to clipboard in blacklist.json format">
+                <span>🚫 Copy Blacklist JSON</span>
+              </button>
+              <div class="flex items-center gap-2">
+                <span class="text-xs text-slate-400">Sort:</span>
+                <select id="selectSort" onchange="renderTable()" class="bg-slate-900 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-yellow-400">
+                  <option value="newest">Newest First</option>
+                  <option value="channel">Channel (WhatsApp vs Telegram)</option>
+                  <option value="expires">Expiration Date</option>
+                  <option value="account">MT5 Account</option>
+                </select>
+              </div>
             </div>
           </div>
 
@@ -401,6 +406,13 @@
         saveLicenses();
         renderTable();
       }
+    }
+
+    function copyBlacklistJSON() {
+      const revoked = licenses.filter(x => x.status === 'revoked').map(x => x.key);
+      const data = JSON.stringify({ revoked: revoked }, null, 2);
+      navigator.clipboard.writeText(data);
+      alert(`Copied ${revoked.length} revoked key(s) to clipboard in blacklist.json format!\n\nYou can paste this into api/blacklist.json or Vercel REVOKED_KEYS environment variable.`);
     }
 
     // Fast SHA-256 in browser using Web Crypto API
