@@ -97,9 +97,9 @@ const Hero = () => (
             { 
               name: 'Alpha', 
               type: 'Best Scalper', 
-              return: '59.9%', 
-              returnLabel: '1Y Net Return', 
-              footnote: '*$10k to $15,993 (1Y Backtest)',
+              return: '+248.6%', 
+              returnLabel: '2Y Net Return', 
+              footnote: '*$10k to $34,858 (2Y Backtest)',
               textColor: 'text-emerald-400'
             },
             { 
@@ -161,7 +161,7 @@ const Hero = () => (
                 <div className="flex flex-wrap gap-2">
                   <div className={`${algo.textColor === 'text-emerald-400' ? 'bg-emerald-400/10 border-emerald-400/30' : 'bg-white/5 border-white/10'} border rounded-lg px-3 py-2 grow`}>
                     <div className={`text-[9px] ${algo.textColor === 'text-emerald-400' ? 'text-emerald-400/70' : 'text-slate-400'} uppercase tracking-wider mb-1`}>
-                      {algo.isDev ? 'Coming Soon' : `${algo.returnLabel} (1Y)`}
+                      {algo.isDev ? 'Coming Soon' : algo.returnLabel}
                     </div>
                     <div className={`${algo.isDev ? 'text-lg tracking-widest uppercase' : 'text-xl'} font-bold ${algo.textColor}`}>{algo.return}</div>
                   </div>
@@ -237,7 +237,7 @@ const Features = () => {
 
 const Performance = () => {
   const [algo, setAlgo] = useState('Alpha');
-  const [timeframe, setTimeframe] = useState('1Y');
+  const [timeframe, setTimeframe] = useState('2Y');
 
   const stats = {
     Alpha: {
