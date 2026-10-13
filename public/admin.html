@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Apex Command - Sales & License Portal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background-color: #080c14; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; }
+    .glass-card { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); }
+    .gold-gradient { background: linear-gradient(135deg, #facc15 0%, #eab308 100%); }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-start">
+
+  <!-- ================= AUTHENTICATION GATE ================= -->
+  <div id="authScreen" class="fixed inset-0 z-50 bg-[#080c14] flex items-center justify-center p-4">
+    <div class="glass-card max-w-md w-full rounded-3xl p-8 border border-white/10 shadow-[0_0_60px_rgba(0,0,0,0.9)] relative overflow-hidden">
+      <div class="absolute -top-24 -right-24 w-48 h-48 bg-yellow-400/10 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="absolute -bottom-24 -left-24 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+      <div class="text-center mb-8">
+        <div class="w-14 h-14 rounded-2xl bg-yellow-400/10 border border-yellow-400/30 flex items-center justify-center text-yellow-400 text-2xl mx-auto mb-4 shadow-[0_0_20px_rgba(250,204,21,0.2)]">
+          ⚡
+        </div>
+        <h1 class="text-2xl font-black text-white tracking-tight">APEX <span class="text-yellow-400">COMMAND</span></h1>
+        <p class="text-xs text-slate-400 mt-1">Authorized Personnel Only • Vercel Encrypted Portal</p>
+      </div>
+
+      <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Admin Login ID</label>
+          <input type="text" id="loginUsername" placeholder="e.g. admin" required class="w-full bg-slate-900/90 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-yellow-400 transition" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Secret Password</label>
+          <input type="password" id="loginPassword" placeholder="••••••••••••" required class="w-full bg-slate-900/90 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-yellow-400 transition" />
+        </div>
+
+        <div id="loginError" class="text-xs text-rose-400 font-medium hidden text-center bg-rose-500/10 border border-rose-500/20 py-2 rounded-lg">
+          Invalid Admin ID or Password. Try again.
+        </div>
+
+        <button type="submit" class="w-full gold-gradient text-slate-950 font-black py-3.5 rounded-xl shadow-[0_0_20px_rgba(250,204,21,0.3)] hover:brightness-110 active:scale-[0.98] transition mt-2">
+          Unlock Command Center
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= MAIN SALES & LICENSE DASHBOARD ================= -->
+  <div id="dashboardContent" class="hidden p-6 md:p-10 max-w-7xl mx-auto w-full">
+
+    <!-- Header -->
+    <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 pb-6 border-b border-white/10">
+      <div class="flex items-center gap-3">
+        <div class="w-12 h-12 rounded-2xl bg-yellow-400/10 border border-yellow-400/30 flex items-center justify-center text-yellow-400 font-bold text-2xl shadow-[0_0_15px_rgba(250,204,21,0.2)]">
+          ⚡
+        </div>
+        <div>
+          <h1 class="text-2xl font-black tracking-tight text-white flex items-center gap-2">
+            APEX <span class="text-yellow-400">COMMAND</span>
+            <span class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono font-medium">Vercel Edge Live</span>
+          </h1>
+          <p class="text-slate-400 text-xs">Direct Telegram & WhatsApp Multi-Channel DRM Command Center</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="bg-slate-900 border border-white/10 rounded-xl px-4 py-2 text-xs font-mono text-slate-300 flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          Admin: <span class="text-yellow-400 font-bold">Raj Kudle</span>
+        </div>
+        <button onclick="handleLogout()" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5">
+          <span>Logout</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Top Metrics Row -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+      <div class="glass-card rounded-2xl p-5">
+        <div class="flex justify-between items-center text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">
+          Active Licenses
+          <span class="text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded text-[11px] font-mono">Real-Time</span>
+        </div>
+        <div class="text-3xl font-black text-white" id="statActiveCount">0</div>
+        <div class="text-[11px] text-slate-500 mt-1">Trading actively on live broker accounts</div>
+      </div>
+
+      <div class="glass-card rounded-2xl p-5">
+        <div class="flex justify-between items-center text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">
+          Channels Breakdown
+          <span class="text-yellow-400 bg-yellow-400/10 px-2 py-0.5 rounded text-[11px]">Direct P2P</span>
+        </div>
+        <div class="text-lg font-black text-white flex items-center gap-3">
+          <span class="text-blue-400 flex items-center gap-1">✈️ <span id="statTelegramCount">0</span></span>
+          <span class="text-slate-600">|</span>
+          <span class="text-emerald-400 flex items-center gap-1">💬 <span id="statWhatsappCount">0</span></span>
+        </div>
+        <div class="text-[11px] text-slate-500 mt-1">Telegram & WhatsApp buyers</div>
+      </div>
+
+      <div class="glass-card rounded-2xl p-5">
+        <div class="flex justify-between items-center text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">
+          Revoked / Blocked
+          <span class="text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded text-[11px]">Kill-Switch</span>
+        </div>
+        <div class="text-3xl font-black text-rose-400" id="statRevokedCount">0</div>
+        <div class="text-[11px] text-slate-500 mt-1">Access permanently severed</div>
+      </div>
+
+      <div class="glass-card rounded-2xl p-5">
+        <div class="flex justify-between items-center text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">
+          Total Net Revenue
+          <span class="text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded text-[11px]">100% Net</span>
+        </div>
+        <div class="text-3xl font-black text-emerald-400" id="statRevenue">$0</div>
+        <div class="text-[11px] text-slate-500 mt-1">Zero platform cuts (100% kept)</div>
+      </div>
+    </div>
+
+    <!-- Main Grid: Generator & License Management Table -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-8">
+
+      <!-- 1. License Generator Form (Left Column) -->
+      <div class="lg:col-span-5 glass-card rounded-3xl p-6 flex flex-col justify-between">
+        <div>
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-yellow-400 text-xl">🔑</span>
+            <h2 class="text-lg font-black text-white">Generate License Key</h2>
+          </div>
+          <p class="text-slate-400 text-xs mb-6">Create a cryptographically signed key for WhatsApp or Telegram buyers.</p>
+
+          <div class="space-y-4">
+            <!-- Channel Switcher -->
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Sales Channel</label>
+              <div class="grid grid-cols-2 gap-2 p-1 bg-slate-900 border border-white/10 rounded-xl">
+                <button type="button" onclick="setChannel('Telegram')" id="btnChanTelegram" class="py-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 bg-blue-500 text-white shadow-md">
+                  ✈️ Telegram
+                </button>
+                <button type="button" onclick="setChannel('WhatsApp')" id="btnChanWhatsapp" class="py-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 text-slate-400 hover:text-white">
+                  💬 WhatsApp
+                </button>
+              </div>
+            </div>
+
+            <!-- Buyer Contact Input -->
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5" id="labelContact">
+                Telegram Handle (@username)
+              </label>
+              <input type="text" id="inputContact" placeholder="@alex_crypto" class="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-yellow-400 transition" />
+            </div>
+
+            <!-- License Tier / Duration -->
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">License Duration</label>
+              <select id="selectTier" onchange="handleDurationChange()" class="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-yellow-400 transition">
+                <option value="6M">6 Months Standard ($200)</option>
+                <option value="1Y">12 Months Annual ($350)</option>
+                <option value="LIFE">Lifetime Access ($2,000)</option>
+                <option value="CUSTOM">Custom Duration (Specific Days / Date)</option>
+              </select>
+            </div>
+
+            <!-- Custom Duration Container -->
+            <div id="customDurationBox" class="p-3 bg-slate-950/70 border border-yellow-400/20 rounded-xl space-y-3 hidden">
+              <div class="text-[11px] text-yellow-400 font-bold uppercase">Custom Expiration Setup</div>
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="block text-[10px] text-slate-400 uppercase mb-1">Days Count</label>
+                  <input type="number" id="inputCustomDays" placeholder="e.g. 30" oninput="handleDaysInput()" class="w-full bg-slate-900 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white" />
+                </div>
+                <div>
+                  <label class="block text-[10px] text-slate-400 uppercase mb-1">Or Specific Date</label>
+                  <input type="date" id="inputCustomDate" onchange="handleDateInput()" class="w-full bg-slate-900 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white" />
+                </div>
+              </div>
+            </div>
+
+            <!-- MT5 Account Lock -->
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">MT5 Account Number <span class="text-slate-500 normal-case">(Optional - Binds key)</span></label>
+              <input type="text" id="inputAccount" placeholder="e.g. 10928374 (or leave blank for Any)" class="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-yellow-400 transition" />
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-6 pt-6 border-t border-white/10">
+          <button onclick="generateNewLicense()" class="w-full gold-gradient text-slate-950 font-black py-3.5 px-4 rounded-xl shadow-[0_0_20px_rgba(250,204,21,0.3)] hover:brightness-110 active:scale-[0.98] transition flex items-center justify-center gap-2">
+            <span>⚡ Generate & Copy License Key</span>
+          </button>
+
+          <!-- Key Output Box -->
+          <div id="keyOutputBox" class="mt-4 p-4 bg-slate-950 border border-yellow-400/40 rounded-xl hidden">
+            <div class="flex justify-between items-center mb-1">
+              <span class="text-[11px] text-yellow-400 font-bold uppercase tracking-wider">Generated Key (Copied!)</span>
+              <span class="text-[10px] text-emerald-400 font-mono">Ready to Send</span>
+            </div>
+            <div class="font-mono text-xs font-bold text-white break-all select-all p-2 bg-slate-900 rounded-lg border border-white/5" id="keyOutputText"></div>
+            <div class="mt-2 text-[11px] text-slate-400" id="keyTargetMessage"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Sheet & Table with Sort & WhatsApp/Telegram Filters (Right Column) -->
+      <div class="lg:col-span-7 glass-card rounded-3xl p-6 flex flex-col justify-between">
+        <div>
+          <!-- Header and Filter Tools -->
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+            <div>
+              <h2 class="text-lg font-black text-white flex items-center gap-2">
+                <span>📋 Customer License Sheet</span>
+              </h2>
+              <p class="text-slate-400 text-xs">Manage active buyers, filter by channel, and execute 1-click revocations.</p>
+            </div>
+            
+            <!-- Sort Dropdown -->
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-slate-400">Sort:</span>
+              <select id="selectSort" onchange="renderTable()" class="bg-slate-900 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-yellow-400">
+                <option value="newest">Newest First</option>
+                <option value="channel">Channel (WhatsApp vs Telegram)</option>
+                <option value="expires">Expiration Date</option>
+                <option value="account">MT5 Account</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Channel Filter Tabs -->
+          <div class="flex items-center gap-2 mb-4 p-1 bg-slate-900 border border-white/10 rounded-xl w-fit">
+            <button onclick="setFilter('ALL')" id="filterAll" class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition bg-white/10 text-white">
+              All Buyers (<span id="countFilterAll">0</span>)
+            </button>
+            <button onclick="setFilter('Telegram')" id="filterTelegram" class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white flex items-center gap-1">
+              ✈️ Telegram (<span id="countFilterTg">0</span>)
+            </button>
+            <button onclick="setFilter('WhatsApp')" id="filterWhatsapp" class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white flex items-center gap-1">
+              💬 WhatsApp (<span id="countFilterWa">0</span>)
+            </button>
+          </div>
+
+          <!-- Table Container -->
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead>
+                <tr class="border-b border-white/10 text-slate-400 font-mono uppercase tracking-wider text-[11px]">
+                  <th class="pb-3">Buyer & Channel</th>
+                  <th class="pb-3">Tier</th>
+                  <th class="pb-3">MT5 Account</th>
+                  <th class="pb-3">Expires</th>
+                  <th class="pb-3">Status</th>
+                  <th class="pb-3 text-right">Kill-Switch Action</th>
+                </tr>
+              </thead>
+              <tbody id="licenseTableBody" class="divide-y divide-white/5">
+                <!-- Injected via JavaScript -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="mt-6 pt-4 border-t border-white/10 flex justify-between items-center text-xs text-slate-500 font-mono">
+          <div>Kill-switch updates take effect instantly on client MT5 terminals.</div>
+          <div id="tableTotalFooter">Showing 0 licenses</div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- JavaScript Functionality -->
+  <script>
+    const MASTER_SECRET = "ApexAlgo2026_RajKudle_MasterSecretKey#777";
+    let currentChannel = 'Telegram';
+    let currentFilter = 'ALL';
+
+    // Load persisted licenses from localStorage or use initial set
+    function loadLicenses() {
+      const saved = localStorage.getItem('apex_licenses_data');
+      if (saved) {
+        try { return JSON.parse(saved); } catch (e) {}
+      }
+      return [
+        { id: 1, channel: "Telegram", contact: "@dan_forex_scalper", tier: "6M", price: 200, account: "10982314", expires: "2027-04-14", key: "APEX-6M-20270414-10982314-F92B11AA", status: "active" },
+        { id: 2, channel: "WhatsApp", contact: "+91 98201 44510", tier: "6M", price: 200, account: "ANY", expires: "2027-04-14", key: "APEX-6M-20270414-ANY-B321A406", status: "active" },
+        { id: 3, channel: "WhatsApp", contact: "+44 7911 123456", tier: "LIFE", price: 2000, account: "55029140", expires: "Lifetime", key: "APEX-LIFE-20361014-55029140-77C188DD", status: "active" }
+      ];
+    }
+
+    let licenses = loadLicenses();
+
+    function saveLicenses() {
+      localStorage.setItem('apex_licenses_data', JSON.stringify(licenses));
+    }
+
+    // Auth state management
+    function checkAuth() {
+      const isAuth = localStorage.getItem('apex_admin_auth');
+      if (isAuth === 'true') {
+        document.getElementById('authScreen').classList.add('hidden');
+        document.getElementById('dashboardContent').classList.remove('hidden');
+        renderTable();
+      } else {
+        document.getElementById('authScreen').classList.remove('hidden');
+        document.getElementById('dashboardContent').classList.add('hidden');
+      }
+    }
+
+    function handleLogin(e) {
+      e.preventDefault();
+      const u = document.getElementById('loginUsername').value.trim();
+      const p = document.getElementById('loginPassword').value.trim();
+
+      if (u.toLowerCase() === 'admin' && p === 'apex2026') {
+        localStorage.setItem('apex_admin_auth', 'true');
+        document.getElementById('loginError').classList.add('hidden');
+        checkAuth();
+      } else {
+        document.getElementById('loginError').classList.remove('hidden');
+      }
+    }
+
+    function handleLogout() {
+      localStorage.removeItem('apex_admin_auth');
+      checkAuth();
+    }
+
+    function setChannel(ch) {
+      currentChannel = ch;
+      const btnTg = document.getElementById('btnChanTelegram');
+      const btnWa = document.getElementById('btnChanWhatsapp');
+      const label = document.getElementById('labelContact');
+      const input = document.getElementById('inputContact');
+
+      if (ch === 'Telegram') {
+        btnTg.className = "py-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 bg-blue-500 text-white shadow-md";
+        btnWa.className = "py-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 text-slate-400 hover:text-white";
+        label.innerText = "Telegram Handle (@username)";
+        input.placeholder = "@alex_crypto";
+      } else {
+        btnWa.className = "py-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 bg-emerald-500 text-white shadow-md";
+        btnTg.className = "py-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 text-slate-400 hover:text-white";
+        label.innerText = "WhatsApp Phone Number (with Country Code)";
+        input.placeholder = "+91 98765 43210";
+      }
+    }
+
+    function handleDurationChange() {
+      const tier = document.getElementById('selectTier').value;
+      const box = document.getElementById('customDurationBox');
+      if (tier === 'CUSTOM') {
+        box.classList.remove('hidden');
+      } else {
+        box.classList.add('hidden');
+      }
+    }
+
+    function handleDaysInput() {
+      const days = parseInt(document.getElementById('inputCustomDays').value);
+      if (!isNaN(days) && days > 0) {
+        const d = new Date();
+        d.setDate(d.getDate() + days);
+        document.getElementById('inputCustomDate').value = d.toISOString().split('T')[0];
+      }
+    }
+
+    function handleDateInput() {
+      const dt = new Date(document.getElementById('inputCustomDate').value);
+      if (!isNaN(dt)) {
+        const now = new Date();
+        const diffDays = Math.ceil((dt - now) / (1000 * 60 * 60 * 24));
+        document.getElementById('inputCustomDays').value = diffDays > 0 ? diffDays : 0;
+      }
+    }
+
+    function setFilter(f) {
+      currentFilter = f;
+      ['filterAll', 'filterTelegram', 'filterWhatsapp'].forEach(id => {
+        document.getElementById(id).className = "px-3.5 py-1.5 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white flex items-center gap-1";
+      });
+
+      if (f === 'ALL') {
+        document.getElementById('filterAll').className = "px-3.5 py-1.5 rounded-lg text-xs font-bold transition bg-white/10 text-white";
+      } else if (f === 'Telegram') {
+        document.getElementById('filterTelegram').className = "px-3.5 py-1.5 rounded-lg text-xs font-bold transition bg-blue-500/20 text-blue-400 border border-blue-500/30 flex items-center gap-1";
+      } else if (f === 'WhatsApp') {
+        document.getElementById('filterWhatsapp').className = "px-3.5 py-1.5 rounded-lg text-xs font-bold transition bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1";
+      }
+
+      renderTable();
+    }
+
+    function toggleKillSwitch(id) {
+      const item = licenses.find(x => x.id === id);
+      if (item) {
+        item.status = item.status === 'active' ? 'revoked' : 'active';
+        saveLicenses();
+        renderTable();
+      }
+    }
+
+    // Fast SHA-256 in browser using Web Crypto API
+    async function calculateSignature(payload) {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(payload);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      return hashHex.substring(0, 8).toUpperCase();
+    }
+
+    async function generateNewLicense() {
+      const contact = document.getElementById('inputContact').value.trim() || (currentChannel === 'Telegram' ? '@buyer' : '+91 9999999999');
+      const tier = document.getElementById('selectTier').value;
+      const account = document.getElementById('inputAccount').value.trim() || 'ANY';
+
+      let expStr = '';
+      let expDisplay = '';
+      let price = 200;
+
+      const now = new Date();
+
+      if (tier === '6M') {
+        const d = new Date(now);
+        d.setDate(d.getDate() + 183);
+        expStr = d.toISOString().split('T')[0].replace(/-/g, '');
+        expDisplay = d.toISOString().split('T')[0];
+        price = 200;
+      } else if (tier === '1Y') {
+        const d = new Date(now);
+        d.setDate(d.getDate() + 365);
+        expStr = d.toISOString().split('T')[0].replace(/-/g, '');
+        expDisplay = d.toISOString().split('T')[0];
+        price = 350;
+      } else if (tier === 'LIFE') {
+        expStr = '20361014';
+        expDisplay = 'Lifetime';
+        price = 2000;
+      } else {
+        const cDate = document.getElementById('inputCustomDate').value;
+        if (cDate) {
+          expDisplay = cDate;
+          expStr = cDate.replace(/-/g, '');
+        } else {
+          const d = new Date(now);
+          d.setDate(d.getDate() + 30);
+          expDisplay = d.toISOString().split('T')[0];
+          expStr = expDisplay.replace(/-/g, '');
+        }
+        price = 150;
+      }
+
+      // Payload matching MQL5 & api/validate.js: tier + ":" + expDate + ":" + targetAcc + ":" + MASTER_SECRET
+      const payload = `${tier}:${expStr}:${account}:${MASTER_SECRET}`;
+      const sig = await calculateSignature(payload);
+      const generatedKey = `APEX-${tier}-${expStr}-${account}-${sig}`;
+
+      licenses.unshift({
+        id: Date.now(),
+        channel: currentChannel,
+        contact: contact,
+        tier: tier,
+        price: price,
+        account: account,
+        expires: expDisplay,
+        key: generatedKey,
+        status: 'active'
+      });
+
+      saveLicenses();
+      renderTable();
+
+      const outBox = document.getElementById('keyOutputBox');
+      const outText = document.getElementById('keyOutputText');
+      const targetMsg = document.getElementById('keyTargetMessage');
+
+      outText.innerText = generatedKey;
+      targetMsg.innerText = currentChannel === 'Telegram' 
+        ? `Ready to paste directly into Telegram chat with ${contact}` 
+        : `Ready to send via WhatsApp message to ${contact}`;
+      outBox.classList.remove('hidden');
+
+      navigator.clipboard.writeText(generatedKey);
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById('licenseTableBody');
+      tbody.innerHTML = '';
+
+      let list = [...licenses];
+
+      if (currentFilter !== 'ALL') {
+        list = list.filter(x => x.channel === currentFilter);
+      }
+
+      const sortBy = document.getElementById('selectSort').value;
+      if (sortBy === 'channel') {
+        list.sort((a, b) => a.channel.localeCompare(b.channel));
+      } else if (sortBy === 'expires') {
+        list.sort((a, b) => a.expires.localeCompare(b.expires));
+      } else if (sortBy === 'account') {
+        list.sort((a, b) => a.account.localeCompare(b.account));
+      }
+
+      let activeCount = 0;
+      let revokedCount = 0;
+      let tgCount = 0;
+      let waCount = 0;
+      let totalRevenue = 0;
+
+      licenses.forEach(l => {
+        if (l.status === 'active') {
+          activeCount++;
+          totalRevenue += l.price;
+        } else {
+          revokedCount++;
+        }
+        if (l.channel === 'Telegram') tgCount++;
+        if (l.channel === 'WhatsApp') waCount++;
+      });
+
+      document.getElementById('statActiveCount').innerText = activeCount;
+      document.getElementById('statRevokedCount').innerText = revokedCount;
+      document.getElementById('statTelegramCount').innerText = tgCount;
+      document.getElementById('statWhatsappCount').innerText = waCount;
+      document.getElementById('statRevenue').innerText = '$' + totalRevenue.toLocaleString();
+      document.getElementById('countFilterAll').innerText = licenses.length;
+      document.getElementById('countFilterTg').innerText = tgCount;
+      document.getElementById('countFilterWa').innerText = waCount;
+      document.getElementById('tableTotalFooter').innerText = `Showing ${list.length} of ${licenses.length} total licenses`;
+
+      list.forEach(l => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-white/[0.02] transition";
+
+        const channelBadge = l.channel === 'Telegram'
+          ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20">✈️ Telegram</span>`
+          : `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">💬 WhatsApp</span>`;
+
+        const contactLink = l.channel === 'Telegram'
+          ? `<a href="https://t.me/${l.contact.replace('@', '')}" target="_blank" class="hover:underline text-blue-400 font-bold">${l.contact}</a>`
+          : `<a href="https://wa.me/${l.contact.replace(/[^0-9]/g, '')}" target="_blank" class="hover:underline text-emerald-400 font-bold">${l.contact}</a>`;
+
+        const statusBadge = l.status === 'active'
+          ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Active</span>`
+          : `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20"><span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span> REVOKED</span>`;
+
+        const actionBtn = l.status === 'active'
+          ? `<button onclick="toggleKillSwitch(${l.id})" class="px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 font-semibold transition active:scale-95 text-[11px]">🚫 Revoke / Block</button>`
+          : `<button onclick="toggleKillSwitch(${l.id})" class="px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-semibold transition active:scale-95 text-[11px]">✅ Restore Access</button>`;
+
+        tr.innerHTML = `
+          <td class="py-3.5 font-bold text-white">
+            <div class="flex items-center gap-2">
+              ${contactLink}
+              ${channelBadge}
+            </div>
+            <div class="font-mono text-[10px] text-slate-500 mt-0.5">${l.key}</div>
+          </td>
+          <td class="py-3.5 font-mono text-yellow-400 font-bold">${l.tier}</td>
+          <td class="py-3.5 font-mono text-slate-300">${l.account}</td>
+          <td class="py-3.5 text-slate-400 font-mono">${l.expires}</td>
+          <td class="py-3.5">${statusBadge}</td>
+          <td class="py-3.5 text-right">${actionBtn}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    checkAuth();
+  </script>
+</body>
+</html>

@@ -1,0 +1,106 @@
+import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
+
+const MASTER_SECRET = "ApexAlgo2026_RajKudle_MasterSecretKey#777";
+
+// Default revoked list
+const DEFAULT_REVOKED = [
+  "APEX-6M-20270410-77209123-99AA"
+];
+
+function getRevokedList() {
+  try {
+    const blacklistPath = path.join(process.cwd(), 'api', 'blacklist.json');
+    if (fs.existsSync(blacklistPath)) {
+      const data = JSON.parse(fs.readFileSync(blacklistPath, 'utf8'));
+      if (Array.isArray(data.revoked)) {
+        return new Set([...DEFAULT_REVOKED, ...data.revoked]);
+      }
+    }
+  } catch (e) {
+    // fallback
+  }
+  return new Set(DEFAULT_REVOKED);
+}
+
+export default function handler(req, res) {
+  // CORS configuration
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, User-Agent');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
+  const { key, account } = req.query;
+
+  if (!key) {
+    return res.status(400).json({ status: 'invalid', message: 'Missing key parameter' });
+  }
+
+  const revokedSet = getRevokedList();
+
+  // 1. Check if key is explicitly revoked
+  if (revokedSet.has(key)) {
+    return res.status(200).json({
+      status: 'revoked',
+      message: 'License has been revoked by the administrator.'
+    });
+  }
+
+  // 2. Parse key format: APEX-{TIER}-{YYYYMMDD}-{ACCOUNT}-{SIG}
+  const parts = key.split('-');
+  if (parts.length !== 5 || parts[0] !== 'APEX') {
+    return res.status(200).json({ status: 'invalid', message: 'Invalid key format.' });
+  }
+
+  const [, tier, expDate, targetAcc, sig] = parts;
+
+  // 3. Cryptographic signature check
+  // Matches MQL5 CryptEncode payload: tier + ":" + expDate + ":" + targetAcc + ":" + MASTER_SECRET
+  const payload = `${tier}:${expDate}:${targetAcc}:${MASTER_SECRET}`;
+  const expectedSig = crypto.createHash('sha256').update(payload, 'utf8').digest('hex').substring(0, 8).toUpperCase();
+
+  if (sig.toUpperCase() !== expectedSig) {
+    return res.status(200).json({ status: 'invalid', message: 'Invalid or forged license signature.' });
+  }
+
+  // 4. Expiration date check
+  if (expDate.length !== 8) {
+    return res.status(200).json({ status: 'invalid', message: 'Invalid expiration date in key.' });
+  }
+
+  const now = new Date();
+  const year = parseInt(expDate.substring(0, 4), 10);
+  const month = parseInt(expDate.substring(4, 6), 10) - 1;
+  const day = parseInt(expDate.substring(6, 8), 10);
+  const expiresAt = new Date(Date.UTC(year, month, day, 23, 59, 59));
+
+  if (now > expiresAt) {
+    return res.status(200).json({
+      status: 'expired',
+      message: `License expired on ${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}.`,
+      tier,
+      expires: expDate
+    });
+  }
+
+  // 5. Account binding check (if account is not ANY)
+  if (targetAcc !== 'ANY' && account && String(account) !== String(targetAcc)) {
+    return res.status(200).json({
+      status: 'unauthorized_account',
+      message: `Key is locked to MT5 account ${targetAcc}. Current account is ${account}.`
+    });
+  }
+
+  // 6. Authorized & Active!
+  return res.status(200).json({
+    status: 'active',
+    tier,
+    account: targetAcc,
+    expires: `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
+    server_time: now.toISOString()
+  });
+}
