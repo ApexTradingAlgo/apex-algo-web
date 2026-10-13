@@ -10,18 +10,28 @@ const DEFAULT_REVOKED = [
 ];
 
 function getRevokedList() {
+  const list = [...DEFAULT_REVOKED];
+  
+  // 1. Check process.env.REVOKED_KEYS
+  if (process.env.REVOKED_KEYS) {
+    const envKeys = process.env.REVOKED_KEYS.split(',').map(s => s.trim()).filter(Boolean);
+    list.push(...envKeys);
+  }
+
+  // 2. Check api/blacklist.json file
   try {
     const blacklistPath = path.join(process.cwd(), 'api', 'blacklist.json');
     if (fs.existsSync(blacklistPath)) {
       const data = JSON.parse(fs.readFileSync(blacklistPath, 'utf8'));
       if (Array.isArray(data.revoked)) {
-        return new Set([...DEFAULT_REVOKED, ...data.revoked]);
+        list.push(...data.revoked);
       }
     }
   } catch (e) {
     // fallback
   }
-  return new Set(DEFAULT_REVOKED);
+
+  return new Set(list);
 }
 
 export default function handler(req, res) {
