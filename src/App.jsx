@@ -241,19 +241,19 @@ const Performance = () => {
 
   const stats = {
     Alpha: {
-      '6M': { profit: '$2,462.27', pf: '1.28', dd: '6.27% ($823.25)' },
-      '1Y': { profit: '$5,993.47', pf: '1.25', dd: '9.71% ($1,199.80)' },
-      '2Y': { profit: '$24,858.53', pf: '1.24', dd: '9.80% ($2,635.36)' }
+      '6M': { profit: '$2,462.27', pf: '1.28', dd: '6.27% ($823.25)', rr: '1 : 1.78', winRate: '41.8%' },
+      '1Y': { profit: '$5,993.47', pf: '1.25', dd: '9.71% ($1,199.80)', rr: '1 : 1.80', winRate: '41.1%' },
+      '2Y': { profit: '$24,858.53', pf: '1.24', dd: '9.80% ($2,635.36)', rr: '1 : 1.80', winRate: '40.9%' }
     },
     Beta: {
-      '6M': { profit: 'TBD', pf: 'TBD', dd: 'TBD' },
-      '1Y': { profit: 'TBD', pf: 'TBD', dd: 'TBD' },
-      '2Y': { profit: 'TBD', pf: 'TBD', dd: 'TBD' }
+      '6M': { profit: 'TBD', pf: 'TBD', dd: 'TBD', rr: 'TBD', winRate: 'TBD' },
+      '1Y': { profit: 'TBD', pf: 'TBD', dd: 'TBD', rr: 'TBD', winRate: 'TBD' },
+      '2Y': { profit: 'TBD', pf: 'TBD', dd: 'TBD', rr: 'TBD', winRate: 'TBD' }
     },
     Theta: {
-      '6M': { profit: 'TBD', pf: 'TBD', dd: 'TBD' },
-      '1Y': { profit: 'TBD', pf: 'TBD', dd: 'TBD' },
-      '2Y': { profit: 'TBD', pf: 'TBD', dd: 'TBD' }
+      '6M': { profit: 'TBD', pf: 'TBD', dd: 'TBD', rr: 'TBD', winRate: 'TBD' },
+      '1Y': { profit: 'TBD', pf: 'TBD', dd: 'TBD', rr: 'TBD', winRate: 'TBD' },
+      '2Y': { profit: 'TBD', pf: 'TBD', dd: 'TBD', rr: 'TBD', winRate: 'TBD' }
     }
   };
 
@@ -318,6 +318,14 @@ const Performance = () => {
               <div className="flex justify-between items-center py-3 border-b border-white/10">
                 <span className="text-slate-300">Max Equity Drawdown</span>
                 <span className="font-mono font-bold text-white">{currentStats.dd}</span>
+              </div>
+              <div className="flex justify-between items-center py-3 border-b border-white/10">
+                <span className="text-slate-300">Risk-to-Reward (R:R)</span>
+                <span className="font-mono font-bold text-white">{currentStats.rr}</span>
+              </div>
+              <div className="flex justify-between items-center py-3 border-b border-white/10">
+                <span className="text-slate-300">Win Rate</span>
+                <span className="font-mono font-bold text-white">{currentStats.winRate}</span>
               </div>
             </div>
             
