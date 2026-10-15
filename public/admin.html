@@ -38,6 +38,13 @@
           <input type="password" id="loginPassword" placeholder="••••••••••••" required class="w-full bg-slate-900/90 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-yellow-400 transition" />
         </div>
 
+        <div class="flex items-center justify-between py-1">
+          <label class="flex items-center gap-2 cursor-pointer select-none">
+            <input type="checkbox" id="loginRememberMe" checked class="w-4 h-4 rounded bg-slate-900 border-white/20 text-yellow-400 focus:ring-yellow-400 focus:ring-offset-0 focus:outline-none accent-yellow-400" />
+            <span class="text-xs text-slate-300 font-medium">Remember me on this device (30 Days)</span>
+          </label>
+        </div>
+
         <div id="loginError" class="text-xs text-rose-400 font-medium hidden text-center bg-rose-500/10 border border-rose-500/20 py-2 rounded-lg">
           Invalid Admin ID or Password. Try again.
         </div>
@@ -282,17 +289,16 @@
     let currentChannel = 'Telegram';
     let currentFilter = 'ALL';
 
-    // Load persisted licenses from localStorage or use initial set
+    // Load persisted licenses from localStorage (Clean state: starts with 0 licenses)
     function loadLicenses() {
       const saved = localStorage.getItem('apex_licenses_data');
       if (saved) {
-        try { return JSON.parse(saved); } catch (e) {}
+        try { 
+          const parsed = JSON.parse(saved); 
+          if (Array.isArray(parsed)) return parsed;
+        } catch (e) {}
       }
-      return [
-        { id: 1, channel: "Telegram", contact: "@dan_forex_scalper", tier: "6M", price: 200, account: "10982314", expires: "2027-04-14", key: "APEX-6M-20270414-10982314-F92B11AA", status: "active" },
-        { id: 2, channel: "WhatsApp", contact: "+91 98201 44510", tier: "6M", price: 200, account: "ANY", expires: "2027-04-14", key: "APEX-6M-20270414-ANY-B321A406", status: "active" },
-        { id: 3, channel: "WhatsApp", contact: "+44 7911 123456", tier: "LIFE", price: 2000, account: "55029140", expires: "Lifetime", key: "APEX-LIFE-20361014-55029140-77C188DD", status: "active" }
-      ];
+      return [];
     }
 
     let licenses = loadLicenses();
@@ -301,9 +307,29 @@
       localStorage.setItem('apex_licenses_data', JSON.stringify(licenses));
     }
 
+    // Token retrieval supporting both persistent (Remember Me) and session storage
+    function getStoredToken() {
+      return localStorage.getItem('apex_admin_token') || sessionStorage.getItem('apex_session_token');
+    }
+
+    function storeToken(token, remember) {
+      if (remember) {
+        localStorage.setItem('apex_admin_token', token);
+        sessionStorage.removeItem('apex_session_token');
+      } else {
+        sessionStorage.setItem('apex_session_token', token);
+        localStorage.removeItem('apex_admin_token');
+      }
+    }
+
+    function clearStoredToken() {
+      localStorage.removeItem('apex_admin_token');
+      sessionStorage.removeItem('apex_session_token');
+    }
+
     // Secure Server-Side Auth state management
     async function checkAuth() {
-      const token = sessionStorage.getItem('apex_session_token');
+      const token = getStoredToken();
       if (!token) {
         showAuthScreen();
         return;
@@ -319,7 +345,7 @@
         if (data.success) {
           showDashboard();
         } else {
-          sessionStorage.removeItem('apex_session_token');
+          clearStoredToken();
           showAuthScreen();
         }
       } catch (err) {
@@ -342,6 +368,7 @@
       e.preventDefault();
       const u = document.getElementById('loginUsername').value.trim();
       const p = document.getElementById('loginPassword').value.trim();
+      const rememberMe = document.getElementById('loginRememberMe').checked;
       const errBox = document.getElementById('loginError');
       const submitBtn = e.target.querySelector('button[type="submit"]');
 
@@ -353,12 +380,12 @@
         const res = await fetch('/api/admin-auth', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'login', username: u, password: p })
+          body: JSON.stringify({ action: 'login', username: u, password: p, rememberMe: rememberMe })
         });
         const data = await res.json();
 
         if (res.ok && data.success) {
-          sessionStorage.setItem('apex_session_token', data.token);
+          storeToken(data.token, rememberMe);
           showDashboard();
         } else {
           errBox.innerText = data.message || 'Invalid Admin ID or Password.';
@@ -374,7 +401,7 @@
     }
 
     function handleLogout() {
-      sessionStorage.removeItem('apex_session_token');
+      clearStoredToken();
       showAuthScreen();
     }
 
@@ -500,7 +527,7 @@
         price = 150;
       }
 
-      const token = sessionStorage.getItem('apex_session_token');
+      const token = getStoredToken();
       if (!token) {
         alert("Session expired. Please log in again.");
         showAuthScreen();

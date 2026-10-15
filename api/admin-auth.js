@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 
-const ADMIN_USER = process.env.ADMIN_USER || "admin";
-const ADMIN_PASS = process.env.ADMIN_PASSWORD || "apex2026";
+const ADMIN_USER = process.env.ADMIN_USER || "rajkudale411work@gmail.com";
+const ADMIN_PASS = process.env.ADMIN_PASSWORD || "8652821060@bhosdikePC";
 const SESSION_SECRET = process.env.SESSION_SECRET || "ApexAlgo2026_RajKudle_AdminSessionSecret#999";
 
 // Rate limiting in-memory store for failed attempts
@@ -115,12 +115,14 @@ export default function handler(req, res) {
   }
 
   // Login action
+  const { rememberMe } = body;
   const isUserValid = timingSafeMatch(username?.trim(), ADMIN_USER);
   const isPassValid = timingSafeMatch(password?.trim(), ADMIN_PASS);
 
   if (isUserValid && isPassValid) {
     resetFailedAttempts(clientIp);
-    const expiresAt = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
+    const tokenDuration = rememberMe ? (30 * 24 * 60 * 60 * 1000) : (24 * 60 * 60 * 1000); // 30 days if rememberMe, else 24 hours
+    const expiresAt = Date.now() + tokenDuration;
     const sessionToken = createToken({
       user: ADMIN_USER,
       iat: Date.now(),
