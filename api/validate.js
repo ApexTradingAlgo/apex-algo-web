@@ -2,12 +2,38 @@ import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 
-const MASTER_SECRET = "ApexAlgo2026_RajKudle_MasterSecretKey#777";
+const MASTER_SECRET = process.env.MASTER_SECRET || "ApexAlgo2026_RajKudle_MasterSecretKey#777";
 
 // Default revoked list
 const DEFAULT_REVOKED = [
   "APEX-6M-20270410-77209123-99AA"
 ];
+
+// Anti-DDoS Rate Limiting: 60 requests per minute per IP
+const ipRequests = new Map();
+const RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const MAX_REQUESTS_PER_WINDOW = 60;
+
+function checkRateLimit(ip) {
+  const now = Date.now();
+  const record = ipRequests.get(ip) || { count: 0, resetTime: now + RATE_LIMIT_WINDOW_MS };
+  if (now > record.resetTime) {
+    record.count = 1;
+    record.resetTime = now + RATE_LIMIT_WINDOW_MS;
+    ipRequests.set(ip, record);
+    return true;
+  }
+  record.count += 1;
+  ipRequests.set(ip, record);
+  return record.count <= MAX_REQUESTS_PER_WINDOW;
+}
+
+function getClientIp(req) {
+  return req.headers['x-forwarded-for']?.split(',')[0]?.trim() || 
+         req.headers['x-real-ip'] || 
+         req.socket?.remoteAddress || 
+         'unknown';
+}
 
 function getRevokedList() {
   const list = [...DEFAULT_REVOKED];
@@ -42,6 +68,14 @@ export default function handler(req, res) {
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
+  }
+
+  const clientIp = getClientIp(req);
+  if (!checkRateLimit(clientIp)) {
+    return res.status(429).json({
+      status: 'rate_limited',
+      message: 'Too many requests. Please wait 1 minute.'
+    });
   }
 
   const { key, account } = req.query;

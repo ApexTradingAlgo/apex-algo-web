@@ -279,7 +279,6 @@
 
   <!-- JavaScript Functionality -->
   <script>
-    const MASTER_SECRET = "ApexAlgo2026_RajKudle_MasterSecretKey#777";
     let currentChannel = 'Telegram';
     let currentFilter = 'ALL';
 
@@ -302,36 +301,81 @@
       localStorage.setItem('apex_licenses_data', JSON.stringify(licenses));
     }
 
-    // Auth state management
-    function checkAuth() {
-      const isAuth = localStorage.getItem('apex_admin_auth');
-      if (isAuth === 'true') {
-        document.getElementById('authScreen').classList.add('hidden');
-        document.getElementById('dashboardContent').classList.remove('hidden');
-        renderTable();
-      } else {
-        document.getElementById('authScreen').classList.remove('hidden');
-        document.getElementById('dashboardContent').classList.add('hidden');
+    // Secure Server-Side Auth state management
+    async function checkAuth() {
+      const token = sessionStorage.getItem('apex_session_token');
+      if (!token) {
+        showAuthScreen();
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/admin-auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'verify', token: token })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showDashboard();
+        } else {
+          sessionStorage.removeItem('apex_session_token');
+          showAuthScreen();
+        }
+      } catch (err) {
+        showAuthScreen();
       }
     }
 
-    function handleLogin(e) {
+    function showDashboard() {
+      document.getElementById('authScreen').classList.add('hidden');
+      document.getElementById('dashboardContent').classList.remove('hidden');
+      renderTable();
+    }
+
+    function showAuthScreen() {
+      document.getElementById('authScreen').classList.remove('hidden');
+      document.getElementById('dashboardContent').classList.add('hidden');
+    }
+
+    async function handleLogin(e) {
       e.preventDefault();
       const u = document.getElementById('loginUsername').value.trim();
       const p = document.getElementById('loginPassword').value.trim();
+      const errBox = document.getElementById('loginError');
+      const submitBtn = e.target.querySelector('button[type="submit"]');
 
-      if (u.toLowerCase() === 'admin' && p === 'apex2026') {
-        localStorage.setItem('apex_admin_auth', 'true');
-        document.getElementById('loginError').classList.add('hidden');
-        checkAuth();
-      } else {
-        document.getElementById('loginError').classList.remove('hidden');
+      submitBtn.disabled = true;
+      submitBtn.innerText = 'Verifying Authenticity...';
+      errBox.classList.add('hidden');
+
+      try {
+        const res = await fetch('/api/admin-auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'login', username: u, password: p })
+        });
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+          sessionStorage.setItem('apex_session_token', data.token);
+          showDashboard();
+        } else {
+          errBox.innerText = data.message || 'Invalid Admin ID or Password.';
+          errBox.classList.remove('hidden');
+        }
+      } catch (err) {
+        errBox.innerText = 'Unable to reach authentication server.';
+        errBox.classList.remove('hidden');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerText = 'Unlock Command Center';
       }
     }
 
     function handleLogout() {
-      localStorage.removeItem('apex_admin_auth');
-      checkAuth();
+      sessionStorage.removeItem('apex_session_token');
+      showAuthScreen();
     }
 
     function setChannel(ch) {
@@ -415,16 +459,6 @@
       alert(`Copied ${revoked.length} revoked key(s) to clipboard in blacklist.json format!\n\nYou can paste this into api/blacklist.json or Vercel REVOKED_KEYS environment variable.`);
     }
 
-    // Fast SHA-256 in browser using Web Crypto API
-    async function calculateSignature(payload) {
-      const encoder = new TextEncoder();
-      const data = encoder.encode(payload);
-      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-      return hashHex.substring(0, 8).toUpperCase();
-    }
-
     async function generateNewLicense() {
       const contact = document.getElementById('inputContact').value.trim() || (currentChannel === 'Telegram' ? '@buyer' : '+91 9999999999');
       const tier = document.getElementById('selectTier').value;
@@ -466,10 +500,47 @@
         price = 150;
       }
 
-      // Payload matching MQL5 & api/validate.js: tier + ":" + expDate + ":" + targetAcc + ":" + MASTER_SECRET
-      const payload = `${tier}:${expStr}:${account}:${MASTER_SECRET}`;
-      const sig = await calculateSignature(payload);
-      const generatedKey = `APEX-${tier}-${expStr}-${account}-${sig}`;
+      const token = sessionStorage.getItem('apex_session_token');
+      if (!token) {
+        alert("Session expired. Please log in again.");
+        showAuthScreen();
+        return;
+      }
+
+      let generatedKey = '';
+      try {
+        const res = await fetch('/api/generate-key', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+          },
+          body: JSON.stringify({
+            tier: tier,
+            expDate: expStr,
+            account: account,
+            channel: currentChannel,
+            contact: contact,
+            price: price
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          if (res.status === 401) {
+            alert("Session expired. Please log in again.");
+            showAuthScreen();
+            return;
+          }
+          alert("Key generation error: " + (data.message || 'Server error'));
+          return;
+        }
+
+        generatedKey = data.key;
+      } catch (err) {
+        alert("Failed to connect to key generation server.");
+        return;
+      }
 
       licenses.unshift({
         id: Date.now(),
