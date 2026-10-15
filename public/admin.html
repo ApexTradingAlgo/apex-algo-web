@@ -225,7 +225,10 @@
             </div>
             
             <!-- Sort & Blacklist Controls -->
-            <div class="flex items-center gap-3 flex-wrap">
+            <div class="flex items-center gap-2 flex-wrap">
+              <button onclick="clearAllBuyers()" class="bg-slate-800 hover:bg-rose-950 text-slate-300 hover:text-rose-400 border border-white/10 hover:border-rose-500/30 px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5" title="Permanently delete all buyer records">
+                <span>🗑️ Clear All</span>
+              </button>
               <button onclick="copyBlacklistJSON()" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5" title="Copy revoked keys to clipboard in blacklist.json format">
                 <span>🚫 Copy Blacklist JSON</span>
               </button>
@@ -264,7 +267,7 @@
                   <th class="pb-3">MT5 Account</th>
                   <th class="pb-3">Expires</th>
                   <th class="pb-3">Status</th>
-                  <th class="pb-3 text-right">Kill-Switch Action</th>
+                  <th class="pb-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody id="licenseTableBody" class="divide-y divide-white/5">
@@ -291,11 +294,21 @@
 
     // Load persisted licenses from localStorage (Clean state: starts with 0 licenses)
     function loadLicenses() {
+      // One-time purge of old dummy/demo licenses from previous builds
+      if (localStorage.getItem('apex_licenses_purged_v2') !== 'true') {
+        localStorage.removeItem('apex_licenses_data');
+        localStorage.setItem('apex_licenses_purged_v2', 'true');
+        return [];
+      }
+
       const saved = localStorage.getItem('apex_licenses_data');
       if (saved) {
         try { 
           const parsed = JSON.parse(saved); 
-          if (Array.isArray(parsed)) return parsed;
+          if (Array.isArray(parsed)) {
+            // Filter out old demo dummy keys if any exist
+            return parsed.filter(x => x.contact !== '@dan_forex_scalper' && x.contact !== '+91 98201 44510' && x.contact !== '+44 7911 123456');
+          }
         } catch (e) {}
       }
       return [];
@@ -474,6 +487,28 @@
       const item = licenses.find(x => x.id === id);
       if (item) {
         item.status = item.status === 'active' ? 'revoked' : 'active';
+        saveLicenses();
+        renderTable();
+      }
+    }
+
+    function deleteBuyer(id) {
+      const item = licenses.find(x => x.id === id);
+      const name = item ? (item.contact || item.key) : 'this buyer';
+      if (confirm(`Are you sure you want to delete ${name} permanently?`)) {
+        licenses = licenses.filter(x => x.id !== id);
+        saveLicenses();
+        renderTable();
+      }
+    }
+
+    function clearAllBuyers() {
+      if (licenses.length === 0) {
+        alert("License sheet is already empty (0 buyers).");
+        return;
+      }
+      if (confirm(`Are you sure you want to delete all ${licenses.length} buyer records and reset everything to 0?`)) {
+        licenses = [];
         saveLicenses();
         renderTable();
       }
@@ -663,6 +698,8 @@
           ? `<button onclick="toggleKillSwitch(${l.id})" class="px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 font-semibold transition active:scale-95 text-[11px]">🚫 Revoke / Block</button>`
           : `<button onclick="toggleKillSwitch(${l.id})" class="px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-semibold transition active:scale-95 text-[11px]">✅ Restore Access</button>`;
 
+        const deleteBtn = `<button onclick="deleteBuyer(${l.id})" class="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-rose-950 text-slate-400 hover:text-rose-400 border border-white/10 hover:border-rose-500/30 transition active:scale-95 text-[11px]" title="Permanently delete record">🗑️</button>`;
+
         tr.innerHTML = `
           <td class="py-3.5 font-bold text-white">
             <div class="flex items-center gap-2">
@@ -675,7 +712,12 @@
           <td class="py-3.5 font-mono text-slate-300">${l.account}</td>
           <td class="py-3.5 text-slate-400 font-mono">${l.expires}</td>
           <td class="py-3.5">${statusBadge}</td>
-          <td class="py-3.5 text-right">${actionBtn}</td>
+          <td class="py-3.5 text-right">
+            <div class="flex items-center justify-end gap-1.5">
+              ${actionBtn}
+              ${deleteBtn}
+            </div>
+          </td>
         `;
         tbody.appendChild(tr);
       });
