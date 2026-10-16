@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
+import { isKeyRevokedInRedis } from './redis.js';
 
 const MASTER_SECRET = process.env.MASTER_SECRET || "ApexAlgo2026_RajKudle_MasterSecretKey#777";
 
@@ -60,7 +61,7 @@ function getRevokedList() {
   return new Set(list);
 }
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
   // CORS configuration
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -84,9 +85,21 @@ export default function handler(req, res) {
     return res.status(400).json({ status: 'invalid', message: 'Missing key parameter' });
   }
 
-  const revokedSet = getRevokedList();
+  // 1. Real-time Redis Check (Instant Kill-Switch)
+  try {
+    const isRevokedInRedis = await isKeyRevokedInRedis(key);
+    if (isRevokedInRedis) {
+      return res.status(200).json({
+        status: 'revoked',
+        message: 'License has been revoked by the administrator.'
+      });
+    }
+  } catch (e) {
+    // fallback to static checks if Redis query fails
+  }
 
-  // 1. Check if key is explicitly revoked
+  // 2. Static / Env Check
+  const revokedSet = getRevokedList();
   if (revokedSet.has(key)) {
     return res.status(200).json({
       status: 'revoked',
@@ -94,7 +107,7 @@ export default function handler(req, res) {
     });
   }
 
-  // 2. Parse key format: APEX-{TIER}-{YYYYMMDD}-{ACCOUNT}-{SIG}
+  // 3. Parse key format: APEX-{TIER}-{YYYYMMDD}-{ACCOUNT}-{SIG}
   const parts = key.split('-');
   if (parts.length !== 5 || parts[0] !== 'APEX') {
     return res.status(200).json({ status: 'invalid', message: 'Invalid key format.' });
@@ -102,7 +115,7 @@ export default function handler(req, res) {
 
   const [, tier, expDate, targetAcc, sig] = parts;
 
-  // 3. Cryptographic signature check
+  // 4. Cryptographic signature check
   // Matches MQL5 CryptEncode payload: tier + ":" + expDate + ":" + targetAcc + ":" + MASTER_SECRET
   const payload = `${tier}:${expDate}:${targetAcc}:${MASTER_SECRET}`;
   const expectedSig = crypto.createHash('sha256').update(payload, 'utf8').digest('hex').substring(0, 8).toUpperCase();
@@ -111,7 +124,7 @@ export default function handler(req, res) {
     return res.status(200).json({ status: 'invalid', message: 'Invalid or forged license signature.' });
   }
 
-  // 4. Expiration date check
+  // 5. Expiration date check
   if (expDate.length !== 8) {
     return res.status(200).json({ status: 'invalid', message: 'Invalid expiration date in key.' });
   }
@@ -131,7 +144,7 @@ export default function handler(req, res) {
     });
   }
 
-  // 5. Account binding check (if account is not ANY)
+  // 6. Account binding check (if account is not ANY)
   if (targetAcc !== 'ANY' && account && String(account) !== String(targetAcc)) {
     return res.status(200).json({
       status: 'unauthorized_account',
@@ -139,7 +152,7 @@ export default function handler(req, res) {
     });
   }
 
-  // 6. Authorized & Active!
+  // 7. Authorized & Active!
   return res.status(200).json({
     status: 'active',
     tier,

@@ -316,8 +316,49 @@
 
     let licenses = loadLicenses();
 
-    function saveLicenses() {
+    async function syncCloudBuyers() {
+      const token = getStoredToken();
+      if (!token) return;
+      try {
+        const res = await fetch('/api/manage-license', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const data = await res.json();
+        if (data.success && Array.isArray(data.buyers) && data.buyers.length > 0) {
+          licenses = data.buyers;
+          localStorage.setItem('apex_licenses_data', JSON.stringify(licenses));
+          renderTable();
+        } else if (licenses.length > 0) {
+          // Push local licenses to cloud if cloud is empty
+          await fetch('/api/manage-license', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify({ action: 'sync', buyers: licenses })
+          });
+        }
+      } catch (e) {
+        console.error('Cloud sync error:', e);
+      }
+    }
+
+    async function saveLicenses() {
       localStorage.setItem('apex_licenses_data', JSON.stringify(licenses));
+      const token = getStoredToken();
+      if (token) {
+        try {
+          await fetch('/api/manage-license', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify({ action: 'sync', buyers: licenses })
+          });
+        } catch (e) {}
+      }
     }
 
     // Token retrieval supporting both persistent (Remember Me) and session storage
@@ -357,6 +398,7 @@
         const data = await res.json();
         if (data.success) {
           showDashboard();
+          syncCloudBuyers(); // Pull real-time cloud data on login
         } else {
           clearStoredToken();
           showAuthScreen();
@@ -400,6 +442,7 @@
         if (res.ok && data.success) {
           storeToken(data.token, rememberMe);
           showDashboard();
+          syncCloudBuyers();
         } else {
           errBox.innerText = data.message || 'Invalid Admin ID or Password.';
           errBox.classList.remove('hidden');
@@ -483,12 +526,39 @@
       renderTable();
     }
 
-    function toggleKillSwitch(id) {
+    async function toggleKillSwitch(id) {
       const item = licenses.find(x => x.id === id);
       if (item) {
+        const prevStatus = item.status;
         item.status = item.status === 'active' ? 'revoked' : 'active';
-        saveLicenses();
         renderTable();
+        
+        // Immediate server-side kill switch in Redis
+        const token = getStoredToken();
+        if (token) {
+          try {
+            const res = await fetch('/api/manage-license', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+              },
+              body: JSON.stringify({
+                action: 'toggle_revoke',
+                key: item.key,
+                status: item.status,
+                buyers: licenses
+              })
+            });
+            const data = await res.json();
+            if (!data.success) {
+              console.warn('Revoke warning:', data.message);
+            }
+          } catch (e) {
+            console.error('Failed to sync kill-switch to cloud:', e);
+          }
+        }
+        saveLicenses();
       }
     }
 
