@@ -2,6 +2,10 @@ import { verifyToken } from './admin-auth.js';
 import { 
   revokeKeyInRedis, 
   unrevokeKeyInRedis, 
+  setIndividualMessageInRedis,
+  getIndividualMessageFromRedis,
+  setGlobalBroadcastInRedis,
+  getGlobalBroadcastFromRedis,
   getStoredBuyersFromRedis, 
   saveBuyersToRedis 
 } from './redis.js';
@@ -27,50 +31,73 @@ export default async function handler(req, res) {
     });
   }
 
-  // GET: Fetch buyers from Redis
+  // GET: Fetch buyers & global broadcast from Redis
   if (req.method === 'GET') {
     const buyers = await getStoredBuyersFromRedis();
+    const broadcast = await getGlobalBroadcastFromRedis();
     return res.status(200).json({
       success: true,
-      buyers: buyers || []
+      buyers: buyers || [],
+      broadcast: broadcast || ''
     });
   }
 
-  // POST: Actions (toggle_revoke, sync_all, delete)
+  // POST: Actions
   if (req.method === 'POST') {
     const body = req.body || {};
-    const { action, key, status, buyers } = body;
+    const { action, key, status, reason, message, buyers } = body;
 
+    // A. Toggle Revoke with optional custom reason
     if (action === 'toggle_revoke') {
       if (!key) {
         return res.status(400).json({ success: false, message: 'Missing key parameter' });
       }
 
       if (status === 'revoked') {
-        await revokeKeyInRedis(key);
+        await revokeKeyInRedis(key, reason);
       } else {
         await unrevokeKeyInRedis(key);
       }
 
-      // If full buyers list is passed, also persist it
       if (Array.isArray(buyers)) {
         await saveBuyersToRedis(buyers);
       }
 
       return res.status(200).json({
         success: true,
-        message: status === 'revoked' ? `Key ${key} revoked successfully in Redis` : `Key ${key} restored successfully in Redis`,
+        message: status === 'revoked' ? `Key revoked with reason: "${reason || 'Default'}"` : `Access restored for ${key}`,
         status: status
       });
     }
 
+    // B. Send or clear individual message
+    if (action === 'send_individual_message') {
+      if (!key) {
+        return res.status(400).json({ success: false, message: 'Missing key parameter' });
+      }
+      await setIndividualMessageInRedis(key, message);
+      return res.status(200).json({
+        success: true,
+        message: message ? `Message sent to buyer with key ${key}` : `Message cleared for ${key}`
+      });
+    }
+
+    // C. Send or clear global broadcast announcement to everyone
+    if (action === 'set_global_broadcast') {
+      await setGlobalBroadcastInRedis(message);
+      return res.status(200).json({
+        success: true,
+        message: message ? `Global broadcast active for all buyers!` : `Global broadcast cleared.`
+      });
+    }
+
+    // D. Full sync of buyers sheet
     if (action === 'sync') {
       if (Array.isArray(buyers)) {
         await saveBuyersToRedis(buyers);
-        // Also ensure all revoked keys in list are in Redis set
         for (const b of buyers) {
           if (b.status === 'revoked' && b.key) {
-            await revokeKeyInRedis(b.key);
+            await revokeKeyInRedis(b.key, b.revokeReason || null);
           } else if (b.status === 'active' && b.key) {
             await unrevokeKeyInRedis(b.key);
           }

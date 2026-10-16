@@ -127,6 +127,38 @@
       </div>
     </div>
 
+    <!-- Broadcast Announcement Card (Send live message to everyone) -->
+    <div class="glass-card rounded-3xl p-5 mb-8 border border-yellow-400/20 bg-gradient-to-r from-yellow-500/5 via-slate-900 to-yellow-500/5">
+      <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-yellow-400/10 border border-yellow-400/20 flex items-center justify-center text-xl">
+            📢
+          </div>
+          <div>
+            <h3 class="text-sm font-black text-white flex items-center gap-2">
+              <span>Broadcast Announcement</span>
+              <span class="text-[10px] font-mono text-yellow-400 bg-yellow-400/10 px-2 py-0.5 rounded-full border border-yellow-400/20">All Active Buyers</span>
+            </h3>
+            <p class="text-xs text-slate-400">Pushes an instant pop-up announcement directly to all clients running the EA on MT5.</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 w-full md:w-auto">
+          <input type="text" id="inputGlobalBroadcast" placeholder="e.g. High-impact CPI news in 15m. Recommended to reduce lot sizes." class="bg-slate-950 border border-white/10 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-yellow-400 w-full md:w-96 transition" />
+          <button onclick="saveGlobalBroadcast()" class="gold-gradient text-slate-950 font-black px-4 py-2 rounded-xl text-xs hover:brightness-110 active:scale-95 transition whitespace-nowrap shadow-[0_0_15px_rgba(250,204,21,0.2)]">
+            Send to Everyone
+          </button>
+          <button onclick="clearGlobalBroadcast()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap" title="Clear current broadcast">
+            Clear
+          </button>
+        </div>
+      </div>
+      <div id="activeBroadcastBadge" class="mt-2 text-[11px] font-mono text-emerald-400 hidden flex items-center gap-1.5">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+        <span>Active Broadcast: <span id="activeBroadcastText" class="text-white font-sans"></span></span>
+      </div>
+    </div>
+
     <!-- Main Grid: Generator & License Management Table -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-8">
 
@@ -287,6 +319,69 @@
 
   </div>
 
+  <!-- 1. Revocation Reason Modal -->
+  <div id="revokeModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+    <div class="glass-card max-w-lg w-full rounded-3xl p-6 border border-rose-500/30 shadow-[0_0_50px_rgba(244,63,94,0.2)]">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 rounded-2xl bg-rose-500/20 text-rose-400 flex items-center justify-center text-xl">
+          🚫
+        </div>
+        <div>
+          <h3 class="text-base font-black text-white">Revoke License Access</h3>
+          <p class="text-xs text-slate-400">Select a preset reason or write a custom message to appear on their MT5 screen.</p>
+        </div>
+      </div>
+
+      <div class="space-y-3 mb-5">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Preset Reasons</label>
+          <select id="selectRevokePreset" onchange="applyRevokePreset()" class="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-rose-400">
+            <option value="custom">-- Custom Message Below --</option>
+            <option value="Your license subscription has ended. Contact @rajkudale on Telegram to renew.">Subscription Expired: "Your license subscription has ended. Contact @rajkudale..."</option>
+            <option value="You have violated license terms and account rules. Contact @rajkudale immediately.">Rule Violation: "You have violated license terms and account rules..."</option>
+            <option value="Unauthorized trading account detected. Contact support on Telegram.">Unauthorized Account: "Unauthorized trading account detected..."</option>
+            <option value="Chargeback / Payment disputed. Access permanently frozen.">Payment Dispute: "Chargeback / Payment disputed..."</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Message Shown on Client's MT5</label>
+          <textarea id="inputRevokeReason" rows="3" placeholder="Enter message to display on the client's MT5 popup..." class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-rose-400"></textarea>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2">
+        <button onclick="closeRevokeModal()" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white bg-slate-900 transition">Cancel</button>
+        <button onclick="confirmRevokeWithReason()" class="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/30 transition">Confirm & Sever Access</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Individual Message Modal -->
+  <div id="messageModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+    <div class="glass-card max-w-lg w-full rounded-3xl p-6 border border-blue-500/30 shadow-[0_0_50px_rgba(59,130,246,0.2)]">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 rounded-2xl bg-blue-500/20 text-blue-400 flex items-center justify-center text-xl">
+          💬
+        </div>
+        <div>
+          <h3 class="text-base font-black text-white">Send Individual Message to Buyer</h3>
+          <p class="text-xs text-slate-400">Pushes a private pop-up alert to this specific buyer's MT5 chart.</p>
+        </div>
+      </div>
+
+      <div class="mb-5">
+        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Message Content</label>
+        <textarea id="inputIndividualMessage" rows="3" placeholder="e.g. Please update your lot size multiplier before London session." class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-blue-400"></textarea>
+      </div>
+
+      <div class="flex justify-end gap-2">
+        <button onclick="closeMessageModal()" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white bg-slate-900 transition">Cancel</button>
+        <button onclick="confirmSendIndividualMessage()" class="px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/30 transition">Send Message</button>
+      </div>
+    </div>
+  </div>
+
   <!-- JavaScript Functionality -->
   <script>
     let currentChannel = 'Telegram';
@@ -324,20 +419,27 @@
           headers: { 'Authorization': 'Bearer ' + token }
         });
         const data = await res.json();
-        if (data.success && Array.isArray(data.buyers) && data.buyers.length > 0) {
-          licenses = data.buyers;
-          localStorage.setItem('apex_licenses_data', JSON.stringify(licenses));
-          renderTable();
-        } else if (licenses.length > 0) {
-          // Push local licenses to cloud if cloud is empty
-          await fetch('/api/manage-license', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer ' + token
-            },
-            body: JSON.stringify({ action: 'sync', buyers: licenses })
-          });
+        if (data.success) {
+          if (Array.isArray(data.buyers) && data.buyers.length > 0) {
+            licenses = data.buyers;
+            localStorage.setItem('apex_licenses_data', JSON.stringify(licenses));
+            renderTable();
+          } else if (licenses.length > 0) {
+            // Push local licenses to cloud if cloud is empty
+            await fetch('/api/manage-license', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+              },
+              body: JSON.stringify({ action: 'sync', buyers: licenses })
+            });
+          }
+
+          if (data.broadcast) {
+            document.getElementById('inputGlobalBroadcast').value = data.broadcast;
+            updateBroadcastBadge(data.broadcast);
+          }
         }
       } catch (e) {
         console.error('Cloud sync error:', e);
@@ -526,18 +628,85 @@
       renderTable();
     }
 
-    async function toggleKillSwitch(id) {
+    // --- Global Broadcast Announcement Handlers ---
+    async function saveGlobalBroadcast() {
+      const msg = document.getElementById('inputGlobalBroadcast').value.trim();
+      const token = getStoredToken();
+      if (!token) return alert('Please login again.');
+      try {
+        const res = await fetch('/api/manage-license', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+          },
+          body: JSON.stringify({ action: 'set_global_broadcast', message: msg })
+        });
+        const data = await res.json();
+        if (data.success) {
+          updateBroadcastBadge(msg);
+          alert(msg ? '📢 Announcement broadcasted to all active MT5 EAs!' : 'Broadcast cleared.');
+        } else {
+          alert('Error: ' + data.message);
+        }
+      } catch (e) {
+        alert('Server connection error.');
+      }
+    }
+
+    async function clearGlobalBroadcast() {
+      document.getElementById('inputGlobalBroadcast').value = '';
+      await saveGlobalBroadcast();
+    }
+
+    function updateBroadcastBadge(msg) {
+      const badge = document.getElementById('activeBroadcastBadge');
+      const text = document.getElementById('activeBroadcastText');
+      if (msg && msg.trim() !== '') {
+        text.innerText = `"${msg}"`;
+        badge.classList.remove('hidden');
+      } else {
+        badge.classList.add('hidden');
+      }
+    }
+
+    // --- Revoke with Reason Modal Logic ---
+    let pendingRevokeId = null;
+
+    function openRevokeModal(id) {
+      pendingRevokeId = id;
       const item = licenses.find(x => x.id === id);
+      document.getElementById('selectRevokePreset').value = "custom";
+      document.getElementById('inputRevokeReason').value = item && item.revokeReason ? item.revokeReason : "";
+      document.getElementById('revokeModal').classList.remove('hidden');
+    }
+
+    function closeRevokeModal() {
+      pendingRevokeId = null;
+      document.getElementById('revokeModal').classList.add('hidden');
+    }
+
+    function applyRevokePreset() {
+      const preset = document.getElementById('selectRevokePreset').value;
+      if (preset !== 'custom') {
+        document.getElementById('inputRevokeReason').value = preset;
+      }
+    }
+
+    async function confirmRevokeWithReason() {
+      if (!pendingRevokeId) return;
+      const reason = document.getElementById('inputRevokeReason').value.trim();
+      const item = licenses.find(x => x.id === pendingRevokeId);
       if (item) {
-        const prevStatus = item.status;
-        item.status = item.status === 'active' ? 'revoked' : 'active';
+        item.status = 'revoked';
+        item.revokeReason = reason;
         renderTable();
-        
-        // Immediate server-side kill switch in Redis
+        closeRevokeModal();
+
         const token = getStoredToken();
         if (token) {
           try {
-            const res = await fetch('/api/manage-license', {
+            await fetch('/api/manage-license', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -546,17 +715,93 @@
               body: JSON.stringify({
                 action: 'toggle_revoke',
                 key: item.key,
-                status: item.status,
+                status: 'revoked',
+                reason: reason,
                 buyers: licenses
               })
             });
-            const data = await res.json();
-            if (!data.success) {
-              console.warn('Revoke warning:', data.message);
-            }
           } catch (e) {
-            console.error('Failed to sync kill-switch to cloud:', e);
+            console.error('Revoke sync error:', e);
           }
+        }
+        saveLicenses();
+      }
+    }
+
+    // --- Individual Message Modal Logic ---
+    let pendingMessageKey = null;
+
+    function openMessageModal(key, currentMsg) {
+      pendingMessageKey = key;
+      document.getElementById('inputIndividualMessage').value = currentMsg || "";
+      document.getElementById('messageModal').classList.remove('hidden');
+    }
+
+    function closeMessageModal() {
+      pendingMessageKey = null;
+      document.getElementById('messageModal').classList.add('hidden');
+    }
+
+    async function confirmSendIndividualMessage() {
+      if (!pendingMessageKey) return;
+      const msg = document.getElementById('inputIndividualMessage').value.trim();
+      const token = getStoredToken();
+      if (!token) return alert('Session expired.');
+
+      try {
+        const res = await fetch('/api/manage-license', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+          },
+          body: JSON.stringify({
+            action: 'send_individual_message',
+            key: pendingMessageKey,
+            message: msg
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          const item = licenses.find(x => x.key === pendingMessageKey);
+          if (item) item.individualMessage = msg;
+          saveLicenses();
+          renderTable();
+          closeMessageModal();
+          alert(msg ? `Message delivered to ${item ? item.contact : 'buyer'} on MT5!` : 'Message cleared.');
+        } else {
+          alert('Failed to send: ' + data.message);
+        }
+      } catch (e) {
+        alert('Server connection error.');
+      }
+    }
+
+    // --- Fast Restore Access ---
+    async function restoreAccess(id) {
+      const item = licenses.find(x => x.id === id);
+      if (item) {
+        item.status = 'active';
+        item.revokeReason = '';
+        renderTable();
+
+        const token = getStoredToken();
+        if (token) {
+          try {
+            await fetch('/api/manage-license', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+              },
+              body: JSON.stringify({
+                action: 'toggle_revoke',
+                key: item.key,
+                status: 'active',
+                buyers: licenses
+              })
+            });
+          } catch (e) {}
         }
         saveLicenses();
       }
@@ -683,7 +928,9 @@
         account: account,
         expires: expDisplay,
         key: generatedKey,
-        status: 'active'
+        status: 'active',
+        revokeReason: '',
+        individualMessage: ''
       });
 
       saveLicenses();
@@ -764,11 +1011,17 @@
           ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Active</span>`
           : `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20"><span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span> REVOKED</span>`;
 
-        const actionBtn = l.status === 'active'
-          ? `<button onclick="toggleKillSwitch(${l.id})" class="px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 font-semibold transition active:scale-95 text-[11px]">🚫 Revoke / Block</button>`
-          : `<button onclick="toggleKillSwitch(${l.id})" class="px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-semibold transition active:scale-95 text-[11px]">✅ Restore Access</button>`;
+        const msgBtn = `<button onclick="openMessageModal('${l.key}', '${(l.individualMessage || '').replace(/'/g, "\\'")}')" class="px-2.5 py-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 font-semibold transition active:scale-95 text-[11px] flex items-center gap-1" title="Send individual popup message to this buyer on MT5">💬 Message</button>`;
 
-        const deleteBtn = `<button onclick="deleteBuyer(${l.id})" class="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-rose-950 text-slate-400 hover:text-rose-400 border border-white/10 hover:border-rose-500/30 transition active:scale-95 text-[11px]" title="Permanently delete record">🗑️</button>`;
+        const actionBtn = l.status === 'active'
+          ? `<button onclick="openRevokeModal(${l.id})" class="px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 font-semibold transition active:scale-95 text-[11px]">🚫 Revoke</button>`
+          : `<button onclick="restoreAccess(${l.id})" class="px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-semibold transition active:scale-95 text-[11px]">✅ Restore</button>`;
+
+        const deleteBtn = `<button onclick="deleteBuyer(${l.id})" class="px-2 py-1.5 rounded-lg bg-slate-900 hover:bg-rose-950 text-slate-400 hover:text-rose-400 border border-white/10 hover:border-rose-500/30 transition active:scale-95 text-[11px]" title="Permanently delete record">🗑️</button>`;
+
+        const subInfo = l.status === 'revoked' && l.revokeReason 
+          ? `<div class="text-[10px] text-rose-400 mt-1 italic">Reason: "${l.revokeReason}"</div>`
+          : (l.individualMessage ? `<div class="text-[10px] text-blue-400 mt-1 italic">Active msg: "${l.individualMessage}"</div>` : '');
 
         tr.innerHTML = `
           <td class="py-3.5 font-bold text-white">
@@ -777,6 +1030,7 @@
               ${channelBadge}
             </div>
             <div class="font-mono text-[10px] text-slate-500 mt-0.5">${l.key}</div>
+            ${subInfo}
           </td>
           <td class="py-3.5 font-mono text-yellow-400 font-bold">${l.tier}</td>
           <td class="py-3.5 font-mono text-slate-300">${l.account}</td>
@@ -784,6 +1038,7 @@
           <td class="py-3.5">${statusBadge}</td>
           <td class="py-3.5 text-right">
             <div class="flex items-center justify-end gap-1.5">
+              ${msgBtn}
               ${actionBtn}
               ${deleteBtn}
             </div>

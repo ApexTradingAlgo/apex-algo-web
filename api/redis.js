@@ -43,18 +43,63 @@ export async function isKeyRevokedInRedis(key) {
   return res.result === 1;
 }
 
-// Add key to revoked set
-export async function revokeKeyInRedis(key) {
+// Add key to revoked set with optional custom revocation reason
+export async function revokeKeyInRedis(key, reason) {
   if (!REDIS_URL || !REDIS_TOKEN) return false;
-  const res = await redisCommand(['SADD', 'apex:revoked_keys', key]);
-  return !res.error;
+  await redisCommand(['SADD', 'apex:revoked_keys', key]);
+  if (reason) {
+    await redisCommand(['SET', `apex:revoke_reason:${key}`, reason]);
+  }
+  return true;
+}
+
+// Get specific revocation reason for a key
+export async function getRevokeReasonFromRedis(key) {
+  if (!REDIS_URL || !REDIS_TOKEN) return null;
+  const res = await redisCommand(['GET', `apex:revoke_reason:${key}`]);
+  return res.result || null;
 }
 
 // Remove key from revoked set (restore access)
 export async function unrevokeKeyInRedis(key) {
   if (!REDIS_URL || !REDIS_TOKEN) return false;
-  const res = await redisCommand(['SREM', 'apex:revoked_keys', key]);
+  await redisCommand(['SREM', 'apex:revoked_keys', key]);
+  await redisCommand(['DEL', `apex:revoke_reason:${key}`]);
+  return true;
+}
+
+// Set / Get individual message for a specific license key
+export async function setIndividualMessageInRedis(key, message) {
+  if (!REDIS_URL || !REDIS_TOKEN) return false;
+  if (!message || message.trim() === '') {
+    await redisCommand(['DEL', `apex:individual_msg:${key}`]);
+    return true;
+  }
+  const res = await redisCommand(['SET', `apex:individual_msg:${key}`, message]);
   return !res.error;
+}
+
+export async function getIndividualMessageFromRedis(key) {
+  if (!REDIS_URL || !REDIS_TOKEN) return null;
+  const res = await redisCommand(['GET', `apex:individual_msg:${key}`]);
+  return res.result || null;
+}
+
+// Set / Get global broadcast announcement for everyone
+export async function setGlobalBroadcastInRedis(message) {
+  if (!REDIS_URL || !REDIS_TOKEN) return false;
+  if (!message || message.trim() === '') {
+    await redisCommand(['DEL', 'apex:global_broadcast']);
+    return true;
+  }
+  const res = await redisCommand(['SET', 'apex:global_broadcast', message]);
+  return !res.error;
+}
+
+export async function getGlobalBroadcastFromRedis() {
+  if (!REDIS_URL || !REDIS_TOKEN) return null;
+  const res = await redisCommand(['GET', 'apex:global_broadcast']);
+  return res.result || null;
 }
 
 // Store / sync buyer records to Redis

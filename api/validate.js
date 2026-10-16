@@ -1,7 +1,12 @@
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
-import { isKeyRevokedInRedis } from './redis.js';
+import { 
+  isKeyRevokedInRedis, 
+  getRevokeReasonFromRedis, 
+  getIndividualMessageFromRedis, 
+  getGlobalBroadcastFromRedis 
+} from './redis.js';
 
 const MASTER_SECRET = process.env.MASTER_SECRET || "ApexAlgo2026_RajKudle_MasterSecretKey#777";
 
@@ -85,17 +90,18 @@ export default async function handler(req, res) {
     return res.status(400).json({ status: 'invalid', message: 'Missing key parameter' });
   }
 
-  // 1. Real-time Redis Check (Instant Kill-Switch)
+  // 1. Real-time Redis Check (Instant Kill-Switch with Custom Reason)
   try {
     const isRevokedInRedis = await isKeyRevokedInRedis(key);
     if (isRevokedInRedis) {
+      const customReason = await getRevokeReasonFromRedis(key);
       return res.status(200).json({
         status: 'revoked',
-        message: 'License has been revoked by the administrator.'
+        message: customReason || 'License has been revoked by the administrator.'
       });
     }
   } catch (e) {
-    // fallback to static checks if Redis query fails
+    // fallback
   }
 
   // 2. Static / Env Check
@@ -116,7 +122,6 @@ export default async function handler(req, res) {
   const [, tier, expDate, targetAcc, sig] = parts;
 
   // 4. Cryptographic signature check
-  // Matches MQL5 CryptEncode payload: tier + ":" + expDate + ":" + targetAcc + ":" + MASTER_SECRET
   const payload = `${tier}:${expDate}:${targetAcc}:${MASTER_SECRET}`;
   const expectedSig = crypto.createHash('sha256').update(payload, 'utf8').digest('hex').substring(0, 8).toUpperCase();
 
@@ -152,12 +157,22 @@ export default async function handler(req, res) {
     });
   }
 
-  // 7. Authorized & Active!
+  // 7. Check for Custom Messages (Individual or Global Broadcast)
+  let individualMsg = null;
+  let broadcastMsg = null;
+  try {
+    individualMsg = await getIndividualMessageFromRedis(key);
+    broadcastMsg = await getGlobalBroadcastFromRedis();
+  } catch (e) {}
+
+  // 8. Authorized & Active!
   return res.status(200).json({
     status: 'active',
     tier,
     account: targetAcc,
     expires: `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
-    server_time: now.toISOString()
+    server_time: now.toISOString(),
+    individual_message: individualMsg || '',
+    broadcast_message: broadcastMsg || ''
   });
 }
